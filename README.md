@@ -1,8 +1,8 @@
 # Data Science Recipes
 
-![R](https://img.shields.io/badge/R-4.0.x-blue)
-![MIT license](https://img.shields.io/badge/License-MIT-green.svg)
-![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4665256.svg)
+[![R](https://img.shields.io/badge/R-4.0.x-blue)](https://cran.r-project.org)
+[![MIT license](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4665256.svg)](https://doi.org/10.5281/zenodo.4665256)
 
 > 50% of data science is copy + paste.
 > The other 50% is figuring out what to copy + paste.
