@@ -20,7 +20,7 @@ In that case, it will be listed under both.
 
 # Software
 
-The recipes presented are intended to be used in [R](https://cran.r-project.org/bin/windows/base/) / R Studio](https://www.rstudio.com/products/rstudio/download/).
+The recipes presented are intended to be used in [R](https://cran.r-project.org/bin/windows/base/) / [R Studio](https://www.rstudio.com/products/rstudio/download/).
 You can use any method to install them, but if you are on Windows you may consider using a [Chocolatey](https://chocolatey.org/install) script.
 
 Open an _admin_ PowerShell prompt and run the code snippet below.
