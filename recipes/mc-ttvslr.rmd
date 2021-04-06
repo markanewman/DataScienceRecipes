@@ -1,0 +1,317 @@
+---
+title: 't-test vs Logistic Regression'
+author: 'Mark Newman'
+date: '2021-04-06'
+editor_options: 
+  chunk_output_type: console
+---
+
+Statistics are all about relationships.
+This recipe explores the relationship between the t-test (`t.test()`) and logistic regression (`glm(family = binary)`.)
+
+# Why?
+
+* The `t.test()` determines the difference between the `mean()`s of two different groups.
+  I.E. `Continuous ~ Categorical`.
+* The `glm(family = binary)` determines the probability that a continuous variable belongs to one of two different groups.
+  I.E. `Categorical ~ Continuous`.
+
+**Theory**: This is an example of a single concept that can be run both forwards and backwards.
+
+In order to test this assertion, we need to develop a Monte-Carlo simulation.
+We will:
+
+```{r label = 'mc setup', echo = F}
+cfg <-
+  list(
+    n = 250,
+    sd = 1,
+    msd = 3,
+    ssd = .1,
+    runs = 500,
+    a = 0.05)
+```
+
+* Generate two overlapping normal distributions.
+  There will be ``r cfg$n`` samples per group.
+  The `rnorm()` function will be used to generate the continuous data.
+  The standard deviation (SD) will be ``r cfg$sd``.
+* Slowly pull the distributions apart until they are clearly different to the human eye.
+  A difference noticeable to an _untrained_ human is around 2.5 SD.
+  We will go to a maximum difference of ``r cfg$msd`` SDs in steps of ``r cfg$ssd`` SD.
+  We exceed the 2.5 SD limit just to be sure.
+* Generate ``r cfg$runs`` runs at each level of difference.
+  This helps us avoid cases where we _happen_ to be dealt a royal flush.
+* Capture the significance (or not) of p < ``r cfg$a`` for both the t-test and logistic regression.
+* Capture the actual group difference for the t-test.
+* Capture the actual recall for the logistic regression.
+  Recall _is_ accuracy when the test data _is_ the training data.
+
+# How?
+
+```{r label = 'helper functions', echo = F}
+simulate_data <- function(n, sd, d) {
+  grps <- c('a', 'b')
+  t1 <-
+    data.frame(
+      cat = rep(grps, each = n),
+      cont = c(
+        rnorm(n = n, mean = 0, sd = sd),
+        rnorm(n = n, mean = d, sd = sd)))
+  t1$cat <- factor(t1$cat, levels = grps)
+  t1[sample(1:nrow(t1), size = nrow(t1)),]
+}
+is_tt_significant <- function(fit, alpha) {
+  tt$p.value < alpha
+}
+is_lr_significant <- function(fit, alpha) {
+  t1 <- summary(fit)
+  t1 <- t1$coefficients
+  t1['cont','Pr(>|z|)'] < alpha
+}
+make_empty_results <- function(size) {
+  i <- as.integer(NA)
+  b <- as.logical(NA)
+  n <- as.numeric(NA)
+  data.frame(
+    diff = rep(i, times = size),
+    run = rep(i, times = size),
+    tt_sig = rep(b, times = size),
+    lr_sig = rep(b, times = size),
+    gd = rep(n, times = size),
+    rec = rep(n, times = size))
+}
+extract_group_difference <- function(fit) {
+  mx <- max(fit$estimate)
+  mn <- min(fit$estimate)
+  mx - mn
+}
+extract_recall <- function(fit) {
+  test <- fit$data
+  lvls <- levels(test$cat)
+  pre <- predict(fit, test, type = 'response')
+  pre <- ifelse(pre < .5, lvls[1], lvls[2])
+  test$pre <- factor(pre, levels = lvls)
+  t1 <- xtabs(~cat + pre, data = test)
+  100 * (t1[1,1] + t1[2,2]) / sum(t1)
+}
+```
+
+The Monte-Carlo simulation consists of two loops.
+The first is to set the Monte-Carlo search parameter; group distance.
+I.E. how far the groups were pulled apart.
+The second loop helps ensure we did not get unlucky when we asked R to randomly generate numbers for us.
+Make sure to `set.seed()` for a reproducible result.
+
+```{r label = 'simulate', results = 'hide', warning = F}
+set.seed(0)
+
+diffs <- seq(from = (cfg$sd * cfg$ssd), to = (cfg$sd * cfg$msd), by = (cfg$sd * cfg$ssd))
+runs <- seq(from = 1, to = cfg$runs)
+results <- make_empty_results(length(diffs) * length(runs))
+results_i <- 1
+
+pb <- txtProgressBar(max = nrow(results), style = 3)
+for(d in diffs) {
+  for(r in runs) {
+    data <- simulate_data(cfg$n, cfg$sd, d)
+    tt <- t.test(cont ~ cat, data = data)
+    lr <- glm(cat ~ cont, data = data, family = binomial)
+    results[results_i,] <-
+      list(
+        d, r,
+        is_tt_significant(tt, cfg$a),
+        is_lr_significant(lr, cfg$a),
+        extract_group_difference(tt),
+        extract_recall(lr))
+    results_i <- results_i + 1
+    setTxtProgressBar(pb, results_i)
+    rm(data, tt, lr)
+  }
+}
+
+close(pb)
+rm(list = ls()[!(ls() %in% c('results', 'cfg'))])
+```
+
+# Results
+
+```{r lable = 'plotting setup', echo = F, message = F}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+We are concerned with four fundamental issues:
+
+* Is are data being generated in a manner we expect?
+* Do our tests really agree?
+* How soon can the t-test report a difference?
+* How soon can the logistic regression reach an acceptable level of recall?
+
+## Issues with Random Number Generators
+
+When _RANDOMALY_ generating data using a random number generator (RNG), it is possible to have data differs from the expected values.
+That is to say if we request 100 values from the `rnorm(mean = 0, sd = 1)` distribution, the data's true mean may be different than 0.
+
+**How far off are our samples?**
+
+```{r label = 'q rng'}
+t1 <- 
+  results %>%
+  mutate(
+    mx = ifelse(diff > gd, diff, gd),
+    mn = ifelse(diff > gd, gd, diff),
+    error = mx - mn) %>%
+  group_by(diff) %>%
+  summarise(
+    Min = min(error),
+    Median = median(error),
+    Mean = mean(error), 
+    Max = max(error),
+    .groups = 'keep') %>%
+  pivot_longer(
+    cols = c('Min', 'Median', 'Mean', 'Max'),
+    names_to = 'Measure')
+p1 <-
+  ggplot(data = t1, aes(x = diff, y = value, color = Measure)) + 
+  scale_color_brewer(palette = 'Dark2') + 
+  geom_line() +
+  theme_bw() +
+  labs(
+    title = 'Data generation differences',
+    x = 'Expected mean difference',
+    y = 'Distance between expected and actual means')
+```
+
+Across the expected mean differences, we see a mean distance of `r round(mean(t1$value[t1$Measure == 'Mean']), 3)` and a max of `r round(max(t1$value[t1$Measure == 'Max']), 3)`.
+This is not problematic at the the higher end of the figure, but is less desirable at the lower end.
+
+**NOTE**: This result is dependent on the sample size.
+In this case `r cfg$n`.
+This makes intuitive sense because the less data there is, the more likely the any one single point will through off the whole distribution.
+
+
+```{r label = 'q rng fig', echo = F}
+plot(p1)
+rm(t1, p1)
+```
+
+## Agreement
+
+**Do t-test and logistic regression really agree with each other?**
+
+```{r label = 'q agrement'}
+t1 <- 
+  results %>%
+  mutate(agrement = tt_sig == lr_sig)
+diss <- sum(!t1$agrement)
+t1 <-
+  t1 %>%
+  group_by(diff) %>%
+  summarise(
+    agrement = 100 * sum(agrement)/n(),
+    .groups = 'keep') %>%
+  mutate(const = factor(1L))
+p1 <-
+  ggplot(data = t1, aes(x = diff, y = agrement, color = const)) +
+  scale_color_brewer(palette = 'Dark2') + 
+  geom_line() +
+  theme_bw() +
+  theme(legend.position = 'none') +
+  labs(
+    title = 'Agreement on statistical significance',
+    subtitle = 't-test vs logistic regression',
+    x = 'Expected mean difference',
+    y = 'Percentage')
+```
+
+There are `r diss` instances out of `r nrow(results)` trials (~`r round(100 * diss / nrow(results), 2)`%) where the two methods differ on statistical significance.
+
+```{r label = 'q agrement fig', echo = F}
+plot(p1)
+rm(t1, p1, diss)
+```
+
+## Significance
+
+The purpose of the t-test is to test weather two groups are different.
+**At what point can the t-test tell the groups apart?**
+
+```{r label = 'q sig'}
+t1 <-
+  results %>%
+  group_by(diff) %>%
+  summarise(
+    H0 = 100 * sum(!tt_sig) / n(),
+    H1 = 100 * sum(tt_sig) / n(),
+    .groups = 'keep') %>%
+  pivot_longer(
+    cols = c('H0', 'H1'),
+    names_to = 'Result') %>%
+  mutate(
+    Result = ifelse(Result == 'H0', 'Fail to reject H0', 'Accept H1'),
+    Result = factor(Result))
+p1 <-
+  ggplot(data = t1, aes(x = diff, y = value, fill = Result)) +
+  scale_color_brewer(palette = 'Dark2') + 
+  geom_area() +
+  theme_bw() +
+  labs(
+    title = 'Detecting group differences',
+    x = 'Expected mean difference',
+    y = 'Percentage')
+t2 <- 
+  t1 %>%
+  filter(Result == 'Accept H1') %>%
+  filter(value >= 50) %>%
+  arrange(diff)
+```
+
+Starting from an expected mean difference of `r t2[1,'diff']`, the t-test can be expected to detect 50% of all group differences when the group size if `r cfg$n`.
+
+**NOTE**: This result is dependent on the sample size.
+In this case `r cfg$n`.
+This makes intuitive sense because the the larger the sample size, the greater the statistical power of the test.
+With greater power comes the ability to detect smaller effect sizes.
+
+```{r label = 'q sig fig', echo = F}
+plot(p1)
+rm(t1, t2, p1)
+```
+
+## Recall
+
+The purpose of logistic regression is to be able classify data into 2 different groups.
+**How quickly does recall rise when the groups are spread apart?**
+
+```{r label = 'q recall'}
+t1 <-
+  results %>%
+  group_by(diff) %>%
+  summarise(
+    Min = min(rec),
+    Median = median(rec),
+    Mean = mean(rec), 
+    Max = max(rec),
+    .groups = 'keep') %>%
+  pivot_longer(
+    cols = c('Min', 'Median', 'Mean', 'Max'),
+    names_to = 'Measure')
+p1 <-
+  ggplot(data = t1, aes(x = diff, y = value, color = Measure)) + 
+  scale_color_brewer(palette = 'Dark2') + 
+  geom_line() +
+  theme_bw() +
+  labs(
+    title = 'Recall',
+    x = 'Expected mean difference',
+    y = 'Percentage')
+```
+
+As the groups get further apart, the recall increases.
+
+```{r label = 'q recall fig', echo = F}
+plot(p1)
+rm(t1, p1)
+```

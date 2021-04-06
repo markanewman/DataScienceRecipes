@@ -1,3 +1,6 @@
 #IDE/Tools
 .Rhistory
 .RData
+
+#Knit
+/recipes/*.html
