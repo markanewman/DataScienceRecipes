@@ -3,7 +3,8 @@
 .RData
 
 #Knit
+/datasets/*.html
 /recipes/*.html
 
 #Data
-*.csv
+/data/*

@@ -15,71 +15,9 @@ The aim here is to provide an automatic process that is close to a drag-and-drop
 
 Having a copy-paste process for EDA is useful in getting any research off the ground.
 
-# How?
+# What?
 
-Download the data from [Kaggle](https://www.kaggle.com/nareshbhat/health-care-data-set-on-heart-attack-possibility).
-It needs to be downloaded first because it is behind Kaggle's Sign In page.
-**NOTE**: The file is in _UTF-8-BoM_.
-We need to re-encode the file to regular _UTF-8_ before starting.
-
-```{r label = 'load data'}
-data <- read.csv('./heart.csv')
-```
-
-`factor()` the data as necessary based on the data dictionary.
-
-```{r label = 'data dictionary conversion', echo = F}
-data$sex <- factor(data$sex, levels = 0:1)
-levels(data$sex) <- c('female', 'male')
-
-data$cp <- factor(data$cp, levels = 0:3)
-levels(data$cp) <- c('typical angina', 'atypical angina', 'non-anginal pain', 'asymptomatic')
-
-data$fbs <- ordered(data$fbs, levels = 0:1)
-levels(data$fbs) <- c('<= 120 mg/dl', '> 120 mg/dl')
-
-data$restecg <- factor(data$restecg, levels = 0:2)
-levels(data$restecg) <- c('normal', 'abnormality', 'hypertrophy')
-
-data$exang <- factor(data$exang, levels = 0:1)
-levels(data$exang) <- c('no', 'yes')
-
-data$slope <- factor(data$slope, levels = 0:2)
-levels(data$slope) <- c('upsloping', 'flat', 'downsloping')
-
-data$thal <- factor(data$thal, levels = 1:3)
-levels(data$thal) <- c('normal', 'fixed defect', 'reversable defect')
-
-data$target <- ordered(data$target, levels = 0:1)
-levels(data$target) <- c('less chance', 'more chance')
-```
-
-```{r label = 'qa factor known fail', echo = F}
-t1 <- nrow(data)
-data <- data[!is.na(data$thal),]
-t2 <- t1 - nrow(data)
-```
-
-**NOTE**: The [Kaggle](https://www.kaggle.com/nareshbhat/health-care-data-set-on-heart-attack-possibility), [UCI MLR](https://archive.ics.uci.edu/ml/datasets/Heart+Disease), and [source paper]( https://doi.org/10.1378/chest.94.2.380) all represent three levels for `thal`.
-It is therefore interesting that the dataset has a level `0`.
-We will treat this as a `NA` and remove it.
-This results in a loss of `r t2` observations (~`r round(100*t2/t1, 1)`%).
-
-```{r label = 'qa factor known fail cleanup', echo = F}
-rm(t1,t2)
-```
-
-QA check the conversion by testing for `NA`s in the factor variables.
-
-```{r label = 'qa factor'}
-for(col in colnames(data)) {
-  t1 <- data[,col]
-  if(is.factor(t1) & any(is.na(t1))) {
-    warning(paste0("QA: Column '", col, "' has NAs"))
-  }
-  rm(t1)
-}
-rm(col)
+```{r child = '../datasets/heartattack.rmd'}
 ```
 
 Mark the target variable then separate out the categorical and continuous predictors.
