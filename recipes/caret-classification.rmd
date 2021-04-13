@@ -1,0 +1,306 @@
+---
+title: 'caret copy+paste for Binary Classification'
+author: 'Mark Newman'
+date: '2021-04-13'
+editor_options: 
+  chunk_output_type: console
+---
+
+This recipe explores using the `caret` package for binary classification.
+While this is not even close to the total number of models, it does provide a copy+paste starting point to get an analysis up and running.
+
+# Why?
+
+The `caret` package is amazing.
+Period.
+
+There is some amount of nuance when it comes to selecting models in `caret`. 
+Choosing a dataset that has both continuous and categorical predictors is a good way to start understanding the overall flow.
+
+# What?
+
+```{r child = '../datasets/heartattack.rmd'}
+```
+
+# How?
+
+Setup `caret` in a consistent manor 
+
+* Split the data into `train` / `test` at a rate of `sr`
+* Further split the `train` into train / validation using the same rate
+* `k`-fold cross validation
+* Down sample the fold to balance the data
+
+```{r label = 'caret setup', message = F, warning = F}
+library(caret)
+
+set.seed(0)
+k <- 10
+sr <- .85
+
+indx <- createDataPartition(data$target, p = sr, list = F)
+train <- data[indx,]
+test <- data[-indx,]
+tCtrl <-
+  trainControl(
+    method = 'cv',
+    number = k,
+    p = sr,
+    verboseIter = T,
+    savePredictions = T,
+    sampling = 'down')
+```
+
+Cleanup unneeded variables
+
+```{r label = 'caret setup cleanup', echo = F}
+rm(k, sr, data, indx)
+```
+
+Setup the results `data.frame()` and associated helper functions.
+**NOTE**: If the target variable ever becomes something other than `$target`, `capture_results()` will need to change.
+
+```{r label = 'results helper functions'}
+capture_results <- function(fit, test) {
+  pre <- predict(fit, test)
+  cm <-
+    confusionMatrix(
+      reference = test$target,
+      data = pre,
+      positive = levels(test$target)[2])
+  list(
+    train_acc = max(fit$results$Accuracy),
+    test_acc = unname(cm$overall['Accuracy']),
+    test_cil = unname(cm$overall['AccuracyLower']),
+    test_ciu = unname(cm$overall['AccuracyUpper']))
+}
+update_results <- function(results, model_name, res) {
+  rbind(
+    results,
+    list(
+      'model' = model_name,
+      'train_acc' = 100 * res$train_acc,
+      'test_acc' = 100 * res$test_acc,
+      'test_cil' = 100 * res$test_cil,
+      'test_ciu' = 100 * res$test_ciu))
+}
+
+results <-
+  data.frame(
+    model = character(),
+    train_acc = numeric(),
+    test_acc = numeric(),
+    test_cil = character(),
+    test_ciu = character(),
+    stringsAsFactors = F)
+```
+
+The list of `caret` models can be found [here](https://topepo.github.io/caret/available-models.html).
+We are going to list out several so that a code comparison can be done.
+
+```{r label = 'formula'}
+formula <- target ~ .
+```
+
+Test out  _Logistic Regression_.
+
+```{r label = 'model glm', results = 'hide'}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'glm',
+    family = 'binomial')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'Logistic Regression', res)
+rm(fit, res)
+```
+
+Test out _Random Forest_.
+
+```{r label = 'model rf', results = 'hide'}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'rf')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'Random Forest', res)
+rm(fit, res)
+```
+
+Test out _Conditional Inference Tree_.
+
+```{r label = 'model ctree', results = 'hide'}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'ctree')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'Conditional Inference Tree', res)
+rm(fit, res)
+```
+
+Test out _Conditional Inference Forest_.
+
+```{r label = 'model cforest', results = 'hide'}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'cforest')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'Conditional Inference Forest', res)
+rm(fit, res)
+```
+
+Test out _Partial Least Squares_.
+
+```{r label = 'model pls', results = 'hide'}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'pls')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'Partial Least Squares', res)
+rm(fit, res)
+```
+
+Test out _Stochastic Gradient Boosting_.
+
+```{r label = 'model gbm', results = 'hide'}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'gbm')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'Stochastic Gradient Boosting', res)
+rm(fit, res)
+```
+
+Test out _Stabilized Nearest Neighbor_.
+
+```{r label = 'model snn', results = 'hide'}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'snn')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'Stabilized Nearest Neighbor', res)
+rm(fit, res)
+```
+
+Test out _Support Vector Machines_.
+
+```{r label = 'model svmLinear', results = 'hide'}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'svmLinear')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'Support Vector Machines', res)
+rm(fit, res)
+```
+
+Test out _Flexible Discriminant Analysis_.
+
+```{r label = 'model fda', results = 'hide', message = F, warning = F}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'fda')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'Flexible Discriminant Analysis', res)
+rm(fit, res)
+```
+
+Test out _k-Nearest Neighbors_.
+
+```{r label = 'model knn', results = 'hide'}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'knn')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'k-Nearest Neighbors', res)
+rm(fit, res)
+```
+
+Test out _Tree Models from Genetic Algorithms_.
+
+```{r label = 'model evtree', results = 'hide'}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'evtree')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'Tree Models from Genetic Algorithms', res)
+rm(fit, res)
+```
+
+Test out _Non-Informative Model_.
+
+```{r label = 'model null', results = 'hide'}
+fit <-
+  train(
+    form = formula,
+    data = train,
+    trControl = tCtrl,
+    method = 'null')
+
+res <- capture_results(fit, test)
+results <- update_results(results, 'Non-Informative Model', res)
+rm(fit, res)
+```
+
+Display the results
+
+```{r label = 'display results', echo = F}
+library(knitr)
+library(kableExtra)
+
+t1 <- results
+t1 <- t1[order(t1$test_acc, decreasing = T),]
+rownames(t1) <- NULL
+t1 <-
+  kable(
+    t1,
+    caption = 'Model Results by Test Accuracy',
+    col.names = c('Model', 'Accuracy', 'Accuracy', 'Lower 95%', 'Upper 95%'),
+    digits = c(0, 2, 2, 2, 2))
+t1 <- kable_styling(t1)
+add_header_above(t1, list(' ' = 1, 'Training' = 1, 'Test' = 3))
+rm(t1)
+```
+
+

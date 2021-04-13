@@ -19,6 +19,10 @@ That means you may need to use the GitHub search feature to find something that 
 Also, a particular recipe may belong to more than one category.
 In that case, it will be listed under both.
 
+## caret
+
+* [Binary Classification](./recipes/caret-classification.rmd)
+
 ## EDA
 
 * [Binary Classification](./recipes/eda-classification.rmd)
