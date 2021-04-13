@@ -4,3 +4,6 @@
 
 #Knit
 /recipes/*.html
+
+#Data
+*.csv

@@ -19,6 +19,10 @@ That means you may need to use the GitHub search feature to find something that 
 Also, a particular recipe may belong to more than one category.
 In that case, it will be listed under both.
 
+## EDA
+
+* [Binary Classification](./recipes/eda-classification.rmd)
+
 ## Monte-Carlo Simulations
 
 * [t-test vs Logistic Regression](./recipes/mc-ttvslr.rmd)

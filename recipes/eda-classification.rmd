@@ -1,0 +1,233 @@
+---
+title: 'EDA for Binary Classification'
+author: 'Mark Newman'
+date: '2021-04-12'
+editor_options: 
+  chunk_output_type: console
+---
+
+This recipe explores one of the various ways to visually explore data before using a binary classifier.
+The aim here is to provide an automatic process that is close to a drag-and-drop method.
+
+# Why?
+
+> A picture is worth a thousand words
+
+Having a copy-paste process for EDA is useful in getting any research off the ground.
+
+# How?
+
+Download the data from [Kaggle](https://www.kaggle.com/nareshbhat/health-care-data-set-on-heart-attack-possibility).
+It needs to be downloaded first because it is behind Kaggle's Sign In page.
+**NOTE**: The file is in _UTF-8-BoM_.
+We need to re-encode the file to regular _UTF-8_ before starting.
+
+```{r label = 'load data'}
+data <- read.csv('./heart.csv')
+```
+
+`factor()` the data as necessary based on the data dictionary.
+
+```{r label = 'data dictionary conversion', echo = F}
+data$sex <- factor(data$sex, levels = 0:1)
+levels(data$sex) <- c('female', 'male')
+
+data$cp <- factor(data$cp, levels = 0:3)
+levels(data$cp) <- c('typical angina', 'atypical angina', 'non-anginal pain', 'asymptomatic')
+
+data$fbs <- ordered(data$fbs, levels = 0:1)
+levels(data$fbs) <- c('<= 120 mg/dl', '> 120 mg/dl')
+
+data$restecg <- factor(data$restecg, levels = 0:2)
+levels(data$restecg) <- c('normal', 'abnormality', 'hypertrophy')
+
+data$exang <- factor(data$exang, levels = 0:1)
+levels(data$exang) <- c('no', 'yes')
+
+data$slope <- factor(data$slope, levels = 0:2)
+levels(data$slope) <- c('upsloping', 'flat', 'downsloping')
+
+data$thal <- factor(data$thal, levels = 1:3)
+levels(data$thal) <- c('normal', 'fixed defect', 'reversable defect')
+
+data$target <- ordered(data$target, levels = 0:1)
+levels(data$target) <- c('less chance', 'more chance')
+```
+
+```{r label = 'qa factor known fail', echo = F}
+t1 <- nrow(data)
+data <- data[!is.na(data$thal),]
+t2 <- t1 - nrow(data)
+```
+
+**NOTE**: The [Kaggle](https://www.kaggle.com/nareshbhat/health-care-data-set-on-heart-attack-possibility), [UCI MLR](https://archive.ics.uci.edu/ml/datasets/Heart+Disease), and [source paper]( https://doi.org/10.1378/chest.94.2.380) all represent three levels for `thal`.
+It is therefore interesting that the dataset has a level `0`.
+We will treat this as a `NA` and remove it.
+This results in a loss of `r t2` observations (~`r round(100*t2/t1, 1)`%).
+
+```{r label = 'qa factor known fail cleanup', echo = F}
+rm(t1,t2)
+```
+
+QA check the conversion by testing for `NA`s in the factor variables.
+
+```{r label = 'qa factor'}
+for(col in colnames(data)) {
+  t1 <- data[,col]
+  if(is.factor(t1) & any(is.na(t1))) {
+    warning(paste0("QA: Column '", col, "' has NAs"))
+  }
+  rm(t1)
+}
+rm(col)
+```
+
+Mark the target variable then separate out the categorical and continuous predictors.
+
+```{r label = 'separate'}
+target <- 'target'
+
+cn <- colnames(data)
+cn <- cn[!(cn %in% target)]
+indx <- sapply(cn, function(x){is.factor(data[,x])})
+colnames_cat <- cn[indx]
+colnames_cont <- cn[!indx]
+rm(cn, indx)
+```
+
+Re-`level()` all the factors based on frequency to allow the figures to show up cleaner.
+We may consider skipping this step if there is a compelling reason I.E. the data is not nominal, but ordinal (`ordered()`).
+
+```{r label = 'relevel'}
+for(cn in colnames_cat) {
+  t1 <- data[,cn]
+  if(!is.ordered(t1)) {
+    t1 <- table(data[,cn])
+    t1 <- sort(t1, decreasing = T)
+    t1 <- names(t1)
+    data[,cn] <- factor(data[,cn], levels = t1)
+  }
+  rm(t1)
+}
+rm(cn)
+```
+
+# Results
+
+When we display the visuals for the EDA, we want them to be in an order that makes sense.
+The default should be in an order that makes sense for the dataset.
+This allows for the best story to be presented.
+
+Baring that, a _reasonable_ alternative is largest absolute test statistic
+In this case the ordering can be seen below.
+
+```{r label = 'helper functions test'}
+library(knitr)
+library(kableExtra)
+
+test_cont <- function(data, target, predictor) {
+  t1 <- data[,c(target, predictor)]
+  colnames(t1) <- c('Class', 'Value')
+  t.test(Value ~ Class, data = t1)
+}
+test_cat <- function(data, target, predictor) {
+  t1 <- table(data[,target], data[,predictor])
+  chisq.test(t1)
+}
+format_pvalue <- function(pv) {
+  if(pv > 0.05) {
+    '> 0.05'
+  } else if(pv < 0.001) {
+    '< 0.001'
+  } else {
+    paste0('= ', round(pv, 3))
+  }
+}
+univariate_test_all <- function(data, test, target, predictors) {
+  df1 <- data.frame(pre = predictors, stat = as.numeric(NA), df = NA, pv = NA)
+  rownames(df1) <- predictors
+  for(predictor in predictors) {
+    t1 <- test(data, target, predictor)
+    df1[predictor, 'stat'] <- t1$statistic
+    df1[predictor, 'df'] <- t1$parameter
+    df1[predictor, 'pv'] <- format_pvalue(t1$p.value)
+    rm(t1)
+  }
+  rm(predictor)
+  df1 <- df1[order(abs(df1$stat), decreasing  = T),]
+  rownames(df1) <- NULL
+  df1
+}
+render_test_all <- function(table, test_stat) {
+  t1 <-
+    kable(
+      table,
+      caption = 'Univariate Results',
+      col.names = c('Predictor', test_stat, 'DF', 'P Value'),
+      digits = c(0, 2, 2, 0))
+  kable_styling(t1)
+}
+```
+
+Using the univariate tests of `t.test()` and `chisq.test()` we can see the relationship between the individual `predictor`s and the class ``r target``.
+**NOTE**: When combining this work with other work, remember to adjust the p-values to prevent an inflated alpha error.
+
+```{r label = 'results test', echo = F, message = F, warning = F}
+t1 <- univariate_test_all(data, test_cont, target, colnames_cont)
+t2 <- univariate_test_all(data, test_cat, target, colnames_cat)
+render_test_all(t1, '$t$')
+render_test_all(t2, '$\\chi^2$')
+rm(test_cont, test_cat, format_pvalue, univariate_test_all, render_test_all)
+rm(colnames_cont, colnames_cat)
+```
+
+```{r label = 'helper functions figure', message = F, warning = F}
+library(vcd)
+library(ggplot2)
+
+univariate_figure_cont <- function(data, target, predictors) {
+  for(predictor in predictors) {
+    t1 <- data[,c(target, predictor)]
+    colnames(t1) <- c('Class', 'Value')
+    p1 <-
+      ggplot(t1, aes(x = Value, color = Class)) + 
+      scale_color_brewer(palette = 'Dark2') + 
+      geom_line(stat = 'ecdf') + 
+      theme_bw() +
+      labs(
+        x = predictor,
+        y = 'Cumulative Density',
+        color = target)
+    plot(p1)
+  }
+}
+univariate_figure_cat <- function(data, target, predictors) {
+  for(predictor in predictors) {
+    t1 <- data[,c(target, predictor)]
+    colnames(t1) <- c('Class', 'Value')
+    t1 <- xtabs(~ Class + Value, data = t1)
+    t2 <- dimnames(t1)
+    names(t2) <- c(target, predictor)
+    dimnames(t1) <- t2
+    mosaic(
+      t1,
+      labeling = labeling_values(rot_labels = c(45, 90, 0, 90)),
+      shade = T)
+  }
+}
+```
+
+Visualizations of the above tests can be seen below.
+
+```{r label = 'results figure', echo = F}
+univariate_figure_cont(data, target, t1$pre)
+univariate_figure_cat(data, target, t2$pre)
+rm(univariate_figure_cont, univariate_figure_cat)
+```
+
+```{r label = 'final cleanup', echo = F}
+rm(data, t1, t2, target)
+```
+
+
+
