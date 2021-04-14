@@ -75,3 +75,10 @@ for(col in colnames(data)) {
 }
 rm(col)
 ```
+
+Mark the `class` variable in both string and formula form.
+
+```{r label = 'formula'}
+class <- 'target'
+formula <- target ~ .
+```

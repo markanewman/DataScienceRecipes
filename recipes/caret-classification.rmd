@@ -98,10 +98,6 @@ results <-
 The list of `caret` models can be found [here](https://topepo.github.io/caret/available-models.html).
 We are going to list out several so that a code comparison can be done.
 
-```{r label = 'formula'}
-formula <- target ~ .
-```
-
 Test out  _Logistic Regression_.
 
 ```{r label = 'model glm', results = 'hide'}
@@ -303,4 +299,6 @@ add_header_above(t1, list(' ' = 1, 'Training' = 1, 'Test' = 3))
 rm(t1)
 ```
 
-
+```{r label = 'final cleanup', echo = F}
+rm(results, tCtrl, test, train, capture_results, update_results, class, formula)
+```

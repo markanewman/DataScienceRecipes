@@ -20,13 +20,11 @@ Having a copy-paste process for EDA is useful in getting any research off the gr
 ```{r child = '../datasets/heartattack.rmd'}
 ```
 
-Mark the target variable then separate out the categorical and continuous predictors.
+Separate out the categorical and continuous predictors.
 
 ```{r label = 'separate'}
-target <- 'target'
-
 cn <- colnames(data)
-cn <- cn[!(cn %in% target)]
+cn <- cn[!(cn %in% class)]
 indx <- sapply(cn, function(x){is.factor(data[,x])})
 colnames_cat <- cn[indx]
 colnames_cont <- cn[!indx]
@@ -63,13 +61,13 @@ In this case the ordering can be seen below.
 library(knitr)
 library(kableExtra)
 
-test_cont <- function(data, target, predictor) {
-  t1 <- data[,c(target, predictor)]
+test_cont <- function(data, class, predictor) {
+  t1 <- data[,c(class, predictor)]
   colnames(t1) <- c('Class', 'Value')
   t.test(Value ~ Class, data = t1)
 }
-test_cat <- function(data, target, predictor) {
-  t1 <- table(data[,target], data[,predictor])
+test_cat <- function(data, class, predictor) {
+  t1 <- table(data[,class], data[,predictor])
   chisq.test(t1)
 }
 format_pvalue <- function(pv) {
@@ -81,11 +79,11 @@ format_pvalue <- function(pv) {
     paste0('= ', round(pv, 3))
   }
 }
-univariate_test_all <- function(data, test, target, predictors) {
+univariate_test_all <- function(data, test, class, predictors) {
   df1 <- data.frame(pre = predictors, stat = as.numeric(NA), df = NA, pv = NA)
   rownames(df1) <- predictors
   for(predictor in predictors) {
-    t1 <- test(data, target, predictor)
+    t1 <- test(data, class, predictor)
     df1[predictor, 'stat'] <- t1$statistic
     df1[predictor, 'df'] <- t1$parameter
     df1[predictor, 'pv'] <- format_pvalue(t1$p.value)
@@ -107,12 +105,12 @@ render_test_all <- function(table, test_stat) {
 }
 ```
 
-Using the univariate tests of `t.test()` and `chisq.test()` we can see the relationship between the individual `predictor`s and the class ``r target``.
+Using the univariate tests of `t.test()` and `chisq.test()` we can see the relationship between the individual `predictor`s and the class ``r class``.
 **NOTE**: When combining this work with other work, remember to adjust the p-values to prevent an inflated alpha error.
 
 ```{r label = 'results test', echo = F, message = F, warning = F}
-t1 <- univariate_test_all(data, test_cont, target, colnames_cont)
-t2 <- univariate_test_all(data, test_cat, target, colnames_cat)
+t1 <- univariate_test_all(data, test_cont, class, colnames_cont)
+t2 <- univariate_test_all(data, test_cat, class, colnames_cat)
 render_test_all(t1, '$t$')
 render_test_all(t2, '$\\chi^2$')
 rm(test_cont, test_cat, format_pvalue, univariate_test_all, render_test_all)
@@ -123,9 +121,9 @@ rm(colnames_cont, colnames_cat)
 library(vcd)
 library(ggplot2)
 
-univariate_figure_cont <- function(data, target, predictors) {
+univariate_figure_cont <- function(data, class, predictors) {
   for(predictor in predictors) {
-    t1 <- data[,c(target, predictor)]
+    t1 <- data[,c(class, predictor)]
     colnames(t1) <- c('Class', 'Value')
     p1 <-
       ggplot(t1, aes(x = Value, color = Class)) + 
@@ -135,17 +133,17 @@ univariate_figure_cont <- function(data, target, predictors) {
       labs(
         x = predictor,
         y = 'Cumulative Density',
-        color = target)
+        color = class)
     plot(p1)
   }
 }
-univariate_figure_cat <- function(data, target, predictors) {
+univariate_figure_cat <- function(data, class, predictors) {
   for(predictor in predictors) {
-    t1 <- data[,c(target, predictor)]
+    t1 <- data[,c(class, predictor)]
     colnames(t1) <- c('Class', 'Value')
     t1 <- xtabs(~ Class + Value, data = t1)
     t2 <- dimnames(t1)
-    names(t2) <- c(target, predictor)
+    names(t2) <- c(class, predictor)
     dimnames(t1) <- t2
     mosaic(
       t1,
@@ -158,13 +156,13 @@ univariate_figure_cat <- function(data, target, predictors) {
 Visualizations of the above tests can be seen below.
 
 ```{r label = 'results figure', echo = F}
-univariate_figure_cont(data, target, t1$pre)
-univariate_figure_cat(data, target, t2$pre)
+univariate_figure_cont(data, class, t1$pre)
+univariate_figure_cat(data, class, t2$pre)
 rm(univariate_figure_cont, univariate_figure_cat)
 ```
 
 ```{r label = 'final cleanup', echo = F}
-rm(data, t1, t2, target)
+rm(data, t1, t2, class, formula)
 ```
 
 
