@@ -76,9 +76,12 @@ for(col in colnames(data)) {
 rm(col)
 ```
 
-Mark the `class` variable in both string and formula form.
+Identify the _classification_ variable and name it `CLASS`.
+This allows for a consistent processing.
 
 ```{r label = 'formula'}
-class <- 'target'
-formula <- target ~ .
+if('CLASS' %in% colnames(data)) { stop('QA: column name clash') }
+data$CLASS <- data$target
+data$target <- NULL
+class_name <- 'target'
 ```

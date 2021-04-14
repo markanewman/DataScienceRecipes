@@ -19,6 +19,12 @@ Choosing a dataset that has both continuous and categorical predictors is a good
 
 # What?
 
+<!--
+Works with the following `../datasets`:
+* heartattack.rmd
+* diabetes.rmd
+-->
+
 ```{r child = '../datasets/heartattack.rmd'}
 ```
 
@@ -38,7 +44,7 @@ set.seed(0)
 k <- 10
 sr <- .85
 
-indx <- createDataPartition(data$target, p = sr, list = F)
+indx <- createDataPartition(data$CLASS, p = sr, list = F)
 train <- data[indx,]
 test <- data[-indx,]
 tCtrl <-
@@ -58,16 +64,16 @@ rm(k, sr, data, indx)
 ```
 
 Setup the results `data.frame()` and associated helper functions.
-**NOTE**: If the target variable ever becomes something other than `$target`, `capture_results()` will need to change.
+Setup `formula` to prevent rewriting it.
 
 ```{r label = 'results helper functions'}
 capture_results <- function(fit, test) {
   pre <- predict(fit, test)
   cm <-
     confusionMatrix(
-      reference = test$target,
+      reference = test$CLASS,
       data = pre,
-      positive = levels(test$target)[2])
+      positive = levels(test$CLASS)[2])
   list(
     train_acc = max(fit$results$Accuracy),
     test_acc = unname(cm$overall['Accuracy']),
@@ -93,6 +99,8 @@ results <-
     test_cil = character(),
     test_ciu = character(),
     stringsAsFactors = F)
+
+formula = CLASS ~.
 ```
 
 The list of `caret` models can be found [here](https://topepo.github.io/caret/available-models.html).
@@ -300,5 +308,5 @@ rm(t1)
 ```
 
 ```{r label = 'final cleanup', echo = F}
-rm(results, tCtrl, test, train, capture_results, update_results, class, formula)
+rm(results, tCtrl, test, train, capture_results, update_results, class_name, formula)
 ```

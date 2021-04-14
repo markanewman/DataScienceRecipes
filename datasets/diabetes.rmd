@@ -1,0 +1,49 @@
+---
+title: 'Diabetes Data from Kaggle'
+author: 'Mark Newman'
+date: '2021-04-13'
+editor_options: 
+  chunk_output_type: console
+---
+
+<!--
+This RMD can and must be runnable in a stand alone manner.
+However, it is intended to be called from other RMDs using the r chunk's `child` parameter.
+-->
+
+Download the data from [Kaggle](https://www.kaggle.com/kandij/diabetes-dataset).
+It needs to be downloaded first because it is behind Kaggle's Sign In page.
+
+```{r label = 'load data'}
+data <- read.csv('../data/diabetes2.csv')
+```
+
+`factor()` the data as necessary based on the data dictionary.
+
+```{r label = 'data dictionary conversion', echo = F}
+data$Outcome <- factor(data$Outcome, levels = 0:1)
+levels(data$Outcome) <- c('no', 'yes')
+```
+
+QA check the conversion by testing for `NA`s in the factor variables.
+
+```{r label = 'qa factor'}
+for(col in colnames(data)) {
+  t1 <- data[,col]
+  if(is.factor(t1) & any(is.na(t1))) {
+    warning(paste0("QA: Column '", col, "' has NAs"))
+  }
+  rm(t1)
+}
+rm(col)
+```
+
+Identify the _classification_ variable and name it `CLASS`.
+This allows for a consistent processing.
+
+```{r label = 'formula'}
+if('CLASS' %in% colnames(data)) { stop('QA: column name clash') }
+data$CLASS <- data$Outcome
+data$Outcome <- NULL
+class_name <- 'Outcome'
+```
