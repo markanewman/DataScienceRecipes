@@ -7,29 +7,21 @@
 > 50% of data science is copy + paste.
 > The other 50% is figuring out what to copy + paste.
 
-This work is a collection of scripts you can copy + paste into your project.
+This aim of this book is to help a practitioner understand binary classification by providing a collection of scripts you can copy + paste into their project.
 They should be fully annotated and self explanatory.
 If more explanation is needed, submit an [issue](https://github.com/markanewman/DataScienceRecipes/issues) and I will look into it.
 If you use the work in something that is public facing, adding a no-cite reference to my DOI is appreciated.
 
-# Recipes
+Right now this is an eBook.
+I plan to release it to Amazon _sometime_ after my dissertation.
+I find that writing this at the same time is helping me keep level.
 
-I categorize my Recipes into things that make sense to _me_.
-That means you may need to use the GitHub search feature to find something that helps you.
-Also, a particular recipe may belong to more than one category.
-In that case, it will be listed under both.
-
-## caret
-
-* [Binary Classification](./recipes/caret-classification.rmd)
-
-## EDA
-
-* [Binary Classification](./recipes/eda-classification.rmd)
-
-## Monte-Carlo Simulations
-
-* [t-test vs Logistic Regression](./recipes/mc-ttvslr.rmd)
+To get your own copy of the ebook:
+1. Clone the repo
+2. Look in `~/00.book/07.examples.rmd` to find all the datasets used as examples.
+   Download then copy them all to the `~/data` folder.
+3. Knit the `~/00.book/00.index.rmd`
+4. Use Edge to "print to PDF".
 
 # Software
 

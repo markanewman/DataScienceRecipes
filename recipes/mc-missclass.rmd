@@ -1,0 +1,178 @@
+---
+title: 'Logistic Regression Misclassification'
+author: 'Mark Newman'
+date: '2021-04-23'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r lable = 'libraries', echo = F, message = F}
+library(ggplot2)
+library(dplyr)
+```
+
+Statistics are all about relationships.
+This recipe explores the relationship between logistic regression (`glm(family = binary)`) and its _recall_.
+
+# Why?
+
+* Accuracy is the most common measure of importance.
+  However, recall _is_ accuracy when the training set _is_ the test set.
+  Making a training / test split seems needless when we intend to do a Monte-Carlo simulation anyway.
+* The `glm(family = binary)` model is the first model everyone tries on binary classification problems.
+  This is due to it being taught in most stats and its extreme understandability.
+  
+**Theory**: Logistic regression misclassifies results around the population mean.
+
+In order to test this assertion, we need to develop a Monte-Carlo simulation.
+We will:
+
+```{r label = 'mc setup', echo = F}
+cfg <-
+  list(
+    n = 250,
+    sd = 1,
+    msd = 3,
+    ssd = .1,
+    runs = 500,
+    a = 0.05)
+```
+
+* Generate two overlapping normal distributions.
+  There will be ``r cfg$n`` samples per group.
+  The `rnorm()` function will be used to generate the continuous data.
+  The standard deviation (SD) will be ``r cfg$sd``.
+* Slowly pull the distributions apart until they are clearly different to the human eye.
+  A difference noticeable to an _untrained_ human is around 2.5 SD.
+  We will go to a maximum difference of ``r cfg$msd`` SDs in steps of ``r cfg$ssd`` SD.
+  We exceed the 2.5 SD limit just to be sure.
+* Generate ``r cfg$runs`` runs at each level of difference.
+  This helps us avoid cases where we _happen_ to be dealt a royal flush.
+* Capture where the majority of the misclassification occur in relationship to the population mean.
+
+# Example
+
+```{r label = 'helper functions', echo = F}
+simulate_data <- function(n, sd, d) {
+  grps <- c('a', 'b')
+  t1 <-
+    data.frame(
+      cat = rep(grps, each = n),
+      cont = c(
+        rnorm(n = n, mean = 0 - d/2, sd = sd),
+        rnorm(n = n, mean = 0 + d/2, sd = sd)))
+  t1$cat <- factor(t1$cat, levels = grps)
+  t1[sample(1:nrow(t1), size = nrow(t1)),]
+}
+capture_means <- function(data) {
+  data %>%
+  group_by(cat) %>%
+  summarise(
+    mean = mean(cont),
+    .groups = 'keep')
+}
+capture_classification <- function(data) {
+  lvls <- levels(data$cat)
+  fit <- glm(cat ~ cont, data = data, family = binomial)
+  pre <- predict(fit, data, type = 'response')
+  data$pre <- ifelse(pre < .5, lvls[1], lvls[2])
+  data$res <- ifelse(data$cat == data$pre, 'Correct', 'Incorrect')
+  data$res <- factor(data$res, levels = c('Incorrect', 'Correct'))
+  data
+}
+make_empty_results <- function(size) {
+  i <- as.integer(NA)
+  n <- as.numeric(NA)
+  data.frame(
+    diff = rep(n, times = size),
+    run = rep(i, times = size),
+    acc = rep(n, times = size))
+}
+```
+
+```{r label = 'example 1', echo = F}
+set.seed(0)
+data <- simulate_data(cfg$n, cfg$sd, 2)
+means <- capture_means(data)
+data <- capture_classification(data)
+
+p1 <-
+  ggplot(data, aes(x = cont, color = cat)) +
+  scale_color_brewer(palette = 'Dark2') +
+  geom_line(stat = 'ecdf') +
+  geom_point(
+    data = data[data$res == 'Incorrect', ],
+    aes(x = cont, color = cat, y = .5, shape = res),
+    position = 'jitter',
+    na.rm = T) +
+  geom_vline(
+    data = means,
+    aes(xintercept = mean, color = cat),
+    linetype = 'dashed',
+    show.legend = F) +
+  geom_text(
+    data = means,
+    aes(x = mean, label = 'Mean', y = 0, color = cat),
+    show.legend = F) +
+  theme_bw() + 
+  labs(
+    title = 'Misclassifications',
+    x = 'Value',
+    y = 'Percentage',
+    color = "Groups",
+    shape = 'Classifaction')
+```
+
+The example below is an empirical density plot.
+The points on the plot are only the _misclassifactions_.
+The mean difference between the two groups is `r round(means$mean[2] - means$mean[1], 2)`.
+The _recall_ of the logistic regression prediction is `r round(100 * sum(data$res == 'Correct')/nrow(data), 2)`%.
+As can be seen, the misclassifaction tends to be around the population mean.
+From the population mean left, all values are classified as group `a`, without regard to how many of group `b` are present.
+
+```{r label = 'example 1 cleanup', echo = F}
+plot(p1)
+rm(data, means, p1)
+```
+
+# How?
+
+The Monte-Carlo simulation consists of two loops.
+The first is to set the Monte-Carlo search parameter; group distance.
+I.E. how far the groups were pulled apart.
+The second loop helps ensure we did not get unlucky when we asked R to randomly generate numbers for us.
+Make sure to `set.seed()` for a reproducible result.
+
+```{r label = 'simulate', echo = F, results = 'hide'}
+set.seed(0)
+
+diffs <- seq(from = (cfg$sd * cfg$ssd), to = (cfg$sd * cfg$msd), by = (cfg$sd * cfg$ssd))
+runs <- seq(from = 1, to = cfg$runs)
+results <- make_empty_results(length(diffs) * length(runs))
+results_i <- 1
+
+pb <- txtProgressBar(max = nrow(results), style = 3)
+for(d in diffs) {
+  for(r in runs) {
+    data <- simulate_data(cfg$n, cfg$sd, d)
+    data <- capture_classification(data)
+    results[results_i,] <- list(d, r, 100 * sum(data$res == 'Correct')/nrow(data))
+    results_i <- results_i + 1
+    setTxtProgressBar(pb, results_i)
+    rm(data)
+  }
+}
+
+close(pb)
+rm(diffs, runs, results_i, d, r, pb)
+```
+
+# Results
+
+
+# Appendix: Code
+
+```{r ref.label = knitr::all_labels(), echo = T, eval = F}
+```
+
+

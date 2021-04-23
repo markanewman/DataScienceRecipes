@@ -103,7 +103,7 @@ I.E. how far the groups were pulled apart.
 The second loop helps ensure we did not get unlucky when we asked R to randomly generate numbers for us.
 Make sure to `set.seed()` for a reproducible result.
 
-```{r label = 'simulate', results = 'hide', warning = F}
+```{r label = 'simulate', echo = F, results = 'hide', warning = F}
 set.seed(0)
 
 diffs <- seq(from = (cfg$sd * cfg$ssd), to = (cfg$sd * cfg$msd), by = (cfg$sd * cfg$ssd))
@@ -156,7 +156,7 @@ That is to say if we request 100 values from the `rnorm(mean = 0, sd = 1)` distr
 
 **How far off are our samples?**
 
-```{r label = 'q rng'}
+```{r label = 'q rng', echo = F}
 t1 <- 
   results %>%
   mutate(
@@ -201,7 +201,7 @@ rm(t1, p1)
 
 **Do t-test and logistic regression really agree with each other?**
 
-```{r label = 'q agrement'}
+```{r label = 'q agrement', echo = F}
 t1 <- 
   results %>%
   mutate(agrement = tt_sig == lr_sig)
@@ -238,7 +238,7 @@ rm(t1, p1, diss)
 The purpose of the t-test is to test weather two groups are different.
 **At what point can the t-test tell the groups apart?**
 
-```{r label = 'q sig'}
+```{r label = 'q sig', echo = F}
 t1 <-
   results %>%
   group_by(diff) %>%
@@ -285,7 +285,7 @@ rm(t1, t2, p1)
 The purpose of logistic regression is to be able classify data into 2 different groups.
 **How quickly does recall rise when the groups are spread apart?**
 
-```{r label = 'q recall'}
+```{r label = 'q recall', echo = F}
 t1 <-
   results %>%
   group_by(diff) %>%
@@ -314,4 +314,9 @@ As the groups get further apart, the recall increases.
 ```{r label = 'q recall fig', echo = F}
 plot(p1)
 rm(t1, p1)
+```
+
+# Appendix: Code
+
+```{r ref.label = knitr::all_labels(), echo = T, eval = F}
 ```

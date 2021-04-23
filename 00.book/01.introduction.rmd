@@ -1,0 +1,35 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Is this book for me? {.front-matter .unnumbered}
+
+This is an applied handbook on analyzing categorical data using R.
+It is intended for the applied practitioner interested in getting results from data.
+
+If you are looking for end-to-end examples with R code, then you have come to the right place.
+
+This book will not be for everyone.
+
+Every work has some amount of author bias built into it.
+My bias leans toward the engineering aspects of analysis.
+There are a lot of topics and side discussions that may, or may not, need expanding.
+For those cases you may need to consult another reference.
+
+## Other Books I Own {-}
+
+I own the following books.
+All of which have influenced me to some degree or another.
+I include them to help you understand where you can go if you want to dig deeper or just want another opinion.
+
+* Categorical Data Modeling by Example: Hands on approach using R [@anderson2016categoricalmodeling]
+* Categorical Data Analysis by Example: Hands on approach using R [@anderson2016categoricalanalysis]
+* Logistic and Multinomial Regression by Example [@anderson2016categorical]
+* Analysis of categorical data with R [@bilder2015analysis]
+* Discrete Data Analysis with R [@friendly2015discrete]
+* An Introduction to Categorical Data Analysis [@agresti2019introduction]
+* An R companion to applied regression [@fox2019an]
+* Regression modeling strategies : with applications to linear models, logistic and ordinal regression, and survival analysis [@harrell2015regression]
+* Applied predictive modeling [@kuhn2013applied]
