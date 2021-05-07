@@ -8,39 +8,43 @@ paged-footnotes: true
 links-to-footnotes: true
 toc-title: Table of Contents
 output:
-  pagedown::book_crc: 
+  pagedown::html_paged: 
     toc: true
     number_sections: yes
     pandoc_args: --mathjax
     self_contained: yes
 editor_options: 
   chunk_output_type: console
-bibliography: [_references.bib, _packages.bib]
+bibliography: [_references.bib, _packages.bib, _datasets.bib]
 link-citations: yes
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/ieee-with-url.csl
 url: 'https\://github.com/markanewman/DataScienceRecipes'
 github-repo: markanewman/DataScienceRecipes
 ---
 
-```{r child = '01.introduction.rmd'}
+```{r echo = F, message = F}
+here::i_am('index.rmd')
 ```
 
-```{r child = '02.understanding.rmd'}
+```{r child = 'book/100 introduction.rmd'}
 ```
 
-```{r child = '03.figures.rmd'}
+```{r child = 'book/200 understanding.rmd'}
 ```
 
-```{r child = '04.tables.rmd'}
+```{r child = 'book/300 figures.rmd'}
 ```
 
-```{r child = '05.modeling.rmd'}
+```{r child = 'book/400 tables.rmd'}
 ```
 
-```{r child = '06.ml.rmd'}
+```{r child = 'book/500 modeling.rmd'}
 ```
 
-```{r child = '07.examples.rmd'}
+```{r child = 'book/600 ml.rmd'}
+```
+
+```{r child = 'book/700 examples.rmd'}
 ```
 
 # References {-}
@@ -49,11 +53,3 @@ github-repo: markanewman/DataScienceRecipes
 nocite: | 
   @github, @rlanguage, @rstudio
 ---
-
-
-
-<!-- This '<div id="refs"></div>' needs to 
-be here if you have appendix pages 
-otherwise you can remove it.-->
-<div id="refs"></div>
-
