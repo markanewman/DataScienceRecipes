@@ -1,4 +1,4 @@
-fit_all <-
+train_all <-
   function(
     formula,
     data,
@@ -39,5 +39,6 @@ fit_all <-
       results[[i]] <- fit
     }
     if(show_progress) { close(pb); rm(pb) }
+    class(results) <- c('dsr1_train_all', class(results))
     results
   }

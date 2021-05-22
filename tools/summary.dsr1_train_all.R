@@ -1,4 +1,4 @@
-fit_all.summary <-
+summary.dsr1_train_all <-
   function(fits) {
     gather_results <- function(fit) {
       result <-
