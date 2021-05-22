@@ -1,4 +1,4 @@
-present_fit_all <-
+fit_all.summary <-
   function(fits) {
     gather_results <- function(fit) {
       result <-
