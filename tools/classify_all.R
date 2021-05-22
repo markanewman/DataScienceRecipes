@@ -4,7 +4,7 @@ classify_all <-
     data,
     k = 10,
     split = .8,
-    models = c('null', 'glm', 'rf', 'ctree', 'cforest', 'pls', 'gbm', 'pda', 'svmLinear', 'svmRadial', 'tan', 'awtan', 'fda', 'knn', 'evtree'),
+    models = c('null', 'glm', 'rf', 'ctree', 'cforest', 'pls', 'gbm', 'pda', 'svmLinear', 'svmRadial', 'nb', 'tan', 'awtan', 'fda', 'knn', 'evtree'),
     show_progress = interactive()) {
     i.train <- function(formula, data, tCtrl) { UseMethod('i.train', tCtrl) }
     i.train.default <- function(formula, data, tCtrl) {
@@ -24,6 +24,30 @@ classify_all <-
         method = tcc[length(tcc)],
         family = 'binomial')
     }
+    gather_results <- function(formula, data, tCtrl) {
+      assign('last.warning', NULL, envir = baseenv())
+      then <- Sys.time()
+      blank <- function() {
+        list(
+          accuracy = as.numeric(NA),
+          ci_lower = as.numeric(NA),
+          ci_upper = as.numeric(NA))
+      }
+      result <-
+        tryCatch({
+          xx <- capture.output(fit <- i.train(formula, data, tCtrl))
+          td <- fit$trainingData
+          pre <- predict(fit, td)
+          cm <- confusionMatrix(reference = td$.outcome, data = pre, positive = levels(td$.outcome)[2])
+          list(
+            accuracy = 100 * unname(cm$overall['Accuracy']),
+            ci_lower = 100 * unname(cm$overall['AccuracyLower']),
+            ci_upper = 100 * unname(cm$overall['AccuracyUpper']))
+          },
+          error = function(e)  { blank() })
+      result$time = as.double(difftime(Sys.time(), then, units = "secs"))
+      result
+    }
     tCtrl <-
       trainControl(
         method = 'cv',
@@ -42,22 +66,9 @@ classify_all <-
     for(i in 1:length(models)) {
       if(show_progress) { utils::setTxtProgressBar(pb, i) }
       class(tCtrl) <- c(tcc, models[i])
-      then <- Sys.time()
-      fit <- i.train(formula, data, tCtrl)
-      now <- Sys.time()
-      td <- fit$trainingData
-      pre <- predict(fit, td)
-      cm <- confusionMatrix(reference = td$.outcome, data = pre, positive = levels(td$.outcome)[2])
-      results <-
-        rbind(
-          results,
-          list(
-            'model' = models[i],
-            'accuracy' = 100 * unname(cm$overall['Accuracy']),
-            'ci_lower' = 100 * unname(cm$overall['AccuracyLower']),
-            'ci_upper' = 100 * unname(cm$overall['AccuracyUpper']),
-            'time' = as.double(difftime(now, then, units = "secs"))))
-      rm(fit, td, pre, cm, then, now)
+      t1 <- gather_results(formula, data, tCtrl)
+      results <- rbind(results, c(list(model = models[i]), t1))
+      rm(t1)
     }
     if(show_progress) { close(pb); rm(pb) }
     results
