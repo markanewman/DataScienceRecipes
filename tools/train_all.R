@@ -2,12 +2,12 @@ train_all <-
   function(
     formula,
     data,
-    models = c('null', 'glm', 'rf', 'ctree', 'cforest', 'pls', 'gbm', 'pda', 'svmLinear', 'svmRadial', 'nb', 'tan', 'awtan', 'fda', 'knn', 'evtree'),
+    models = c('null', 'glm', 'rf', 'ctree', 'cforest', 'pls', 'gbm', 'pda', 'svmLinear', 'svmRadial', 'nb', 'tan', 'awtan', 'fda', 'knn', 'evtree', 'xgbDART', 'xgbLinear', 'xgbTree'),
     k = 10,
     split = .8,
     show_progress = interactive()) {
     train_safe <- function(formula, data, tCtrl, model) {
-      assign('last.warning', NULL, envir = baseenv())
+      assign('last.warning', NULL)
       arg.list <-
         list(
           form = formula,
